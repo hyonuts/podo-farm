@@ -31,7 +31,7 @@ struct MainCamera;
 
 // 타일 종류
 #[derive(Component)]
-#[derive(Clone)]
+#[derive(Clone, Copy, PartialEq)]
 enum TileType {
     Grass,
     Dirt,
@@ -44,6 +44,40 @@ impl TileType {
             TileType::Grass => Color::srgb(0.2, 0.6, 0.2),
             TileType::Dirt => Color::srgb(0.5, 0.3, 0.1),
             TileType::Water => Color::srgb(0.2, 0.4, 0.8),
+        }
+    }
+
+    fn is_walkable(&self) -> bool {
+        match self {
+            TileType::Grass => true,
+            TileType::Dirt => true,
+            TileType::Water => false,
+        }
+    }
+}
+
+#[derive(Resource)]
+struct TileMap {
+    tiles: Vec<Vec<TileType>>,
+}
+
+impl TileMap {
+    // 월드 좌표를 타일 인덱스로 변환
+    fn world_to_tile(&self, x: f32, y: f32) -> Option<(usize, usize)> {
+        let tile_x = ((x / TILE_SIZE) + (MAP_WIDTH as f32 / 2.0)).floor() as i32;
+        let tile_y = ((MAP_HEIGHT as f32 / 2.0) - (y / TILE_SIZE)).floor() as i32;
+
+        if tile_x >= 0 && tile_x < MAP_WIDTH && tile_y >= 0 && tile_y < MAP_HEIGHT {
+            Some((tile_x as usize, tile_y as usize))
+        } else {
+            None
+        }
+    }
+
+    fn is_walkable(&self, x: f32, y: f32) -> bool {
+        match self.world_to_tile(x, y) {
+            Some((tx, ty)) => self.tiles[ty][tx].is_walkable(),
+            None => false,
         }
     }
 }
@@ -105,13 +139,15 @@ fn setup_tilemap(mut commands: Commands) {
             ));
         }
     }
+
+    commands.insert_resource(TileMap {tiles});
 }
 
 fn setup_player(mut commands: Commands) {
     commands.spawn((
         Sprite {
             color: Color::srgb(0.9, 0.7, 0.5),
-            custom_size: Some(Vec2::new(28.0, 28.0)),
+            custom_size: Some(Vec2::new(32.0, 32.0)),
             ..default()
         },
         Transform::from_xyz(0.0, 0.0, 1.0),
@@ -123,12 +159,13 @@ fn setup_player(mut commands: Commands) {
 fn move_player(
     keyboard: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
+    tilemap: Res<TileMap>,
     mut query: Query<&mut Transform, With<Player>>,
 ) {
     let speed = 200.0;
     let dt = time.delta_secs();
 
-    let player_half_size = 14.0;
+    let player_half_size = 16.0;
     let map_half_width = (MAP_WIDTH as f32 / 2.0) * TILE_SIZE;
     let map_half_height = (MAP_HEIGHT as f32 / 2.0) * TILE_SIZE;
 
@@ -136,25 +173,39 @@ fn move_player(
     let bound_y = map_half_height - player_half_size;
 
     for mut transform in &mut query {
+        let mut new_x = transform.translation.x;
+        let mut new_y = transform.translation.y;
+
         if keyboard.pressed(KeyCode::KeyW) || keyboard.pressed(KeyCode::ArrowUp) {
-            transform.translation.y += speed * dt;
+            new_y += speed * dt;
         }
 
         if keyboard.pressed(KeyCode::KeyS) || keyboard.pressed(KeyCode::ArrowDown) {
-            transform.translation.y -= speed * dt;
+            new_y -= speed * dt;
         }
 
         if keyboard.pressed(KeyCode::KeyA) || keyboard.pressed(KeyCode::ArrowLeft) {
-            transform.translation.x -= speed * dt;
+            new_x -= speed * dt;
         }
 
         if keyboard.pressed(KeyCode::KeyD) || keyboard.pressed(KeyCode::ArrowRight) {
-            transform.translation.x += speed * dt;
+            new_x += speed * dt;
         }
 
         // 맵 제한
-        transform.translation.x = transform.translation.x.clamp(-bound_x, bound_x);
-        transform.translation.y = transform.translation.y.clamp(-bound_y, bound_y);
+        new_x = new_x.clamp(-bound_x, bound_x);
+        new_y = new_y.clamp(-bound_y, bound_y);
+
+        // 움직일 수 있는 맵인지 충돌 체크 (플레이어의 네 모서리 모두)
+        let can_move = tilemap.is_walkable(new_x - player_half_size, new_y - player_half_size)
+            && tilemap.is_walkable(new_x + player_half_size, new_y - player_half_size)
+            && tilemap.is_walkable(new_x - player_half_size, new_y + player_half_size)
+            && tilemap.is_walkable(new_x + player_half_size, new_y + player_half_size);
+
+        if can_move {
+            transform.translation.x = new_x;
+            transform.translation.y = new_y;
+        }
     }
 }
 
