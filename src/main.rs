@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 const TILE_SIZE: f32 = 32.0;
-const MAP_WIDTH: i32 = 20;
-const MAP_HEIGHT: i32 = 15;
+const MAP_WIDTH: i32 = 40;
+const MAP_HEIGHT: i32 = 30;
 
 fn main() {
 
@@ -51,7 +51,7 @@ impl TileType {
 fn setup_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d::default(),
-        MainCamera
+        MainCamera,
     ));
 }
 
@@ -60,15 +60,28 @@ fn setup_tilemap(mut commands: Commands) {
     let mut tiles = vec![vec![TileType::Grass; MAP_WIDTH as usize]; MAP_HEIGHT as usize];
 
     // 농장 땅
-    for y in 4..11 {
-        for x in 4..16 {
+    for y in 5..15 {
+        for x in 5..20 {
+            tiles[y][x] = TileType::Dirt;
+        }
+    }
+
+    for y in 10..20 {
+        for x in 22..35 {
             tiles[y][x] = TileType::Dirt;
         }
     }
 
     // 연못
-    for y in 11..14 {
-        for x in 14..18 {
+    for y in 20..26 {
+        for x in 5..12 {
+            tiles[y][x] = TileType::Water;
+        }
+    }
+
+    // 강
+    for y in 0..MAP_HEIGHT as usize {
+        for x in 36..40 {
             tiles[y][x] = TileType::Water;
         }
     }
@@ -77,8 +90,8 @@ fn setup_tilemap(mut commands: Commands) {
     for (y, row) in tiles.iter().enumerate() {
         for (x, tile_type) in row.iter().enumerate() {
             let position = Vec3::new(
-                (x as f32 - MAP_WIDTH as f32 / 2.0) * TILE_SIZE,
-                (MAP_HEIGHT as f32 / 2.0 - y as f32) * TILE_SIZE,
+                (x as f32 - MAP_WIDTH as f32 / 2.0 + 0.5) * TILE_SIZE,
+                (MAP_HEIGHT as f32 / 2.0 - y as f32 - 0.5) * TILE_SIZE,
                 0.0,
             );
 
@@ -115,6 +128,13 @@ fn move_player(
     let speed = 200.0;
     let dt = time.delta_secs();
 
+    let player_half_size = 14.0;
+    let map_half_width = (MAP_WIDTH as f32 / 2.0) * TILE_SIZE;
+    let map_half_height = (MAP_HEIGHT as f32 / 2.0) * TILE_SIZE;
+
+    let bound_x = map_half_width - player_half_size;
+    let bound_y = map_half_height - player_half_size;
+
     for mut transform in &mut query {
         if keyboard.pressed(KeyCode::KeyW) || keyboard.pressed(KeyCode::ArrowUp) {
             transform.translation.y += speed * dt;
@@ -131,6 +151,10 @@ fn move_player(
         if keyboard.pressed(KeyCode::KeyD) || keyboard.pressed(KeyCode::ArrowRight) {
             transform.translation.x += speed * dt;
         }
+
+        // 맵 제한
+        transform.translation.x = transform.translation.x.clamp(-bound_x, bound_x);
+        transform.translation.y = transform.translation.y.clamp(-bound_y, bound_y);
     }
 }
 
