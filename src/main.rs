@@ -9,14 +9,14 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Podo Farm".to_string(),
+                title: "Podo Farm".into(),
                 resolution: (800.0, 600.0).into(),
                 ..default()
             }),
             ..default()
         }))
         .add_systems(Startup, (setup_camera, setup_tilemap, setup_player).chain())
-        .add_systems(Update, move_player)
+        .add_systems(Update, (move_player, camera_follow).chain())
         .run();
 }
 
@@ -24,6 +24,10 @@ fn main() {
 // 이 엔티티가 플레이어임
 #[derive(Component)]
 struct Player;
+
+// 카메라
+#[derive(Component)]
+struct MainCamera;
 
 // 타일 종류
 #[derive(Component)]
@@ -45,7 +49,10 @@ impl TileType {
 }
 
 fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2d::default());
+    commands.spawn((
+        Camera2d::default(),
+        MainCamera
+    ));
 }
 
 fn setup_tilemap(mut commands: Commands) {
@@ -124,5 +131,19 @@ fn move_player(
         if keyboard.pressed(KeyCode::KeyD) || keyboard.pressed(KeyCode::ArrowRight) {
             transform.translation.x += speed * dt;
         }
+    }
+}
+
+fn camera_follow(
+    player_query: Query<&Transform, With<Player>>,
+    mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
+) {
+    let Ok(player_transform) = player_query.get_single() else {
+        return;
+    };
+
+    for mut camera_transform in &mut camera_query {
+        camera_transform.translation.x = player_transform.translation.x;
+        camera_transform.translation.y = player_transform.translation.y;
     }
 }
