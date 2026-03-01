@@ -1,0 +1,16 @@
+# Rust
+/target
+Cargo.lock
+
+# WASM 빌드 출력
+/web
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
