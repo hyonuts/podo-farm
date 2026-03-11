@@ -1,0 +1,84 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1773224806544,
+  "projectRoot": "/Users/ubaba/Workspace/farm-game",
+  "techStack": {
+    "languages": [
+      {
+        "name": "Rust",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "Cargo.toml"
+        ]
+      }
+    ],
+    "frameworks": [],
+    "packageManager": "cargo",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "cargo build",
+    "testCommand": "cargo test",
+    "lintCommand": "cargo clippy",
+    "devCommand": "cargo run",
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1773224806537,
+      "keyFiles": [
+        "main.rs"
+      ]
+    },
+    "target": {
+      "path": "target",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1773224806537,
+      "keyFiles": [
+        "CACHEDIR.TAG"
+      ]
+    },
+    "web": {
+      "path": "web",
+      "purpose": null,
+      "fileCount": 5,
+      "lastAccessed": 1773224806537,
+      "keyFiles": [
+        "farm-game.d.ts",
+        "farm-game.js",
+        "farm-game_bg.wasm",
+        "farm-game_bg.wasm.d.ts",
+        "index.html"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src/main.rs",
+      "accessCount": 10,
+      "lastAccessed": 1773228708133,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
