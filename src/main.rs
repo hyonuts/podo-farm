@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 const TILE_SIZE: f32 = 32.0;
 const MAP_WIDTH: i32 = 40;
-const MAP_HEIGHT: i32 = 30;
+const MAP_HEIGHT: i32 = 40;
 
 fn main() {
 
@@ -67,11 +67,11 @@ impl TileMap {
         let tile_x = ((x / TILE_SIZE) + (MAP_WIDTH as f32 / 2.0)).floor() as i32;
         let tile_y = ((MAP_HEIGHT as f32 / 2.0) - (y / TILE_SIZE)).floor() as i32;
 
-        if tile_x >= 0 && tile_x < MAP_WIDTH && tile_y >= 0 && tile_y < MAP_HEIGHT {
-            Some((tile_x as usize, tile_y as usize))
-        } else {
-            None
-        }
+        // 경계 값을 맵 범위 내로 클램프
+        let tile_x = tile_x.clamp(0, MAP_WIDTH - 1);
+        let tile_y = tile_y.clamp(0, MAP_HEIGHT - 1);
+
+        Some((tile_x as usize, tile_y as usize))
     }
 
     fn is_walkable(&self, x: f32, y: f32) -> bool {
@@ -173,8 +173,10 @@ fn move_player(
     let bound_y = map_half_height - player_half_size;
 
     for mut transform in &mut query {
-        let mut new_x = transform.translation.x;
-        let mut new_y = transform.translation.y;
+        let cur_x = transform.translation.x;
+        let cur_y = transform.translation.y;
+        let mut new_x = cur_x;
+        let mut new_y = cur_y;
 
         if keyboard.pressed(KeyCode::KeyW) || keyboard.pressed(KeyCode::ArrowUp) {
             new_y += speed * dt;
@@ -192,19 +194,57 @@ fn move_player(
             new_x += speed * dt;
         }
 
-        // 맵 제한
+        // 맵 경계 제한
         new_x = new_x.clamp(-bound_x, bound_x);
         new_y = new_y.clamp(-bound_y, bound_y);
 
-        // 움직일 수 있는 맵인지 충돌 체크 (플레이어의 네 모서리 모두)
-        let can_move = tilemap.is_walkable(new_x - player_half_size, new_y - player_half_size)
-            && tilemap.is_walkable(new_x + player_half_size, new_y - player_half_size)
-            && tilemap.is_walkable(new_x - player_half_size, new_y + player_half_size)
-            && tilemap.is_walkable(new_x + player_half_size, new_y + player_half_size);
+        // 축 분리 충돌 체크: X와 Y를 독립적으로 검사하여 벽을 따라 슬라이딩 가능
+        let hs = player_half_size;
 
-        if can_move {
+        // X축 이동 체크
+        let can_move_x = tilemap.is_walkable(new_x - hs, cur_y - hs)
+            && tilemap.is_walkable(new_x + hs, cur_y - hs)
+            && tilemap.is_walkable(new_x - hs, cur_y + hs)
+            && tilemap.is_walkable(new_x + hs, cur_y + hs);
+
+        if can_move_x {
             transform.translation.x = new_x;
+        } else if new_x > cur_x {
+            let snap = ((cur_x + hs) / TILE_SIZE).ceil() * TILE_SIZE - hs - 0.01;
+            if tilemap.is_walkable(snap + hs, cur_y - hs)
+                && tilemap.is_walkable(snap + hs, cur_y + hs) {
+                transform.translation.x = snap;
+            }
+        } else if new_x < cur_x {
+            let snap = ((cur_x - hs) / TILE_SIZE).floor() * TILE_SIZE + hs;
+            if tilemap.is_walkable(snap - hs, cur_y - hs)
+                && tilemap.is_walkable(snap - hs, cur_y + hs) {
+                transform.translation.x = snap;
+            }
+        }
+
+        let final_x = transform.translation.x;
+
+        // Y축 이동 체크
+        let can_move_y = tilemap.is_walkable(final_x - hs, new_y - hs)
+            && tilemap.is_walkable(final_x + hs, new_y - hs)
+            && tilemap.is_walkable(final_x - hs, new_y + hs)
+            && tilemap.is_walkable(final_x + hs, new_y + hs);
+
+        if can_move_y {
             transform.translation.y = new_y;
+        } else if new_y > cur_y {
+            let snap = ((cur_y + hs) / TILE_SIZE).ceil() * TILE_SIZE - hs;
+            if tilemap.is_walkable(final_x - hs, snap + hs)
+                && tilemap.is_walkable(final_x + hs, snap + hs) {
+                transform.translation.y = snap;
+            }
+        } else if new_y < cur_y {
+            let snap = ((cur_y - hs) / TILE_SIZE).floor() * TILE_SIZE + hs + 0.01;
+            if tilemap.is_walkable(final_x - hs, snap - hs)
+                && tilemap.is_walkable(final_x + hs, snap - hs) {
+                transform.translation.y = snap;
+            }
         }
     }
 }
